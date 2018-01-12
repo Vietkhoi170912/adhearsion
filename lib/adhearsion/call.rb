@@ -495,15 +495,16 @@ module Adhearsion
       command
     rescue Timeout::Error
       error_handler[CommandTimeout.new(command.to_s)]
+      reset_call command
     ensure
       @commands.delete command
     end
 
     # @private
-    def reset_call
-      puts "command id hello world"
+    def reset_call command
+      puts "Reset on command:" + command.to_s
       Adhearsion.active_calls.remove_inactive_call self
-      puts "Finish remove active call of timeout client"
+      puts "Finish remove active call of timeout client on command: " + command.to_s
     end
 
     def write_command(command)
