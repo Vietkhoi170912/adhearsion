@@ -12,9 +12,9 @@ module Adhearsion
   #
   class Call
 
-    Hangup = Class.new Adhearsion::Error
-    CommandTimeout = Class.new Adhearsion::Error
-    ExpiredError = Class.new Celluloid::DeadActorError
+    Hangup          = Class.new Adhearsion::Error
+    CommandTimeout  = Class.new Adhearsion::Error
+    ExpiredError    = Class.new Celluloid::DeadActorError
 
     # @private
     class ActorProxy < Celluloid::ActorProxy
@@ -77,17 +77,17 @@ module Adhearsion
     def initialize(offer = nil)
       register_initial_handlers
 
-      @offer = nil
-      @tags = []
-      @commands = CommandRegistry.new
-      @variables = HashWithIndifferentAccess.new
-      @controllers = []
-      @end_reason = nil
-      @end_code = nil
-      @end_blocker = Celluloid::Condition.new
-      @peers = {}
-      @duration = nil
-      @auto_hangup = true
+      @offer        = nil
+      @tags         = []
+      @commands     = CommandRegistry.new
+      @variables    = HashWithIndifferentAccess.new
+      @controllers  = []
+      @end_reason   = nil
+      @end_code     = nil
+      @end_blocker  = Celluloid::Condition.new
+      @peers        = {}
+      @duration     = nil
+      @auto_hangup  = true
       @after_hangup_lifetime = nil
       @call_terminating = false
 
@@ -100,7 +100,6 @@ module Adhearsion
     def id
       offer.target_call_id if offer
     end
-
     alias :to_s :id
 
     #
@@ -140,7 +139,7 @@ module Adhearsion
     # @param [String, Symbol] label
     #
     def remove_tag(label)
-      @tags.reject! {|tag| tag == label}
+      @tags.reject! { |tag| tag == label }
     end
 
     #
@@ -190,10 +189,9 @@ module Adhearsion
     def deliver_message(message)
       logger.debug "Receiving message: #{message.inspect}"
       catching_standard_errors do
-        trigger_handler :event, message, broadcast: true, exception_callback: ->(e) {Adhearsion::Events.trigger :exception, [e, logger]}
+        trigger_handler :event, message, broadcast: true, exception_callback: ->(e) { Adhearsion::Events.trigger :exception, [e, logger] }
       end
     end
-
     alias << deliver_message
 
     def commands
@@ -203,7 +201,7 @@ module Adhearsion
     # @private
     def register_initial_handlers
       register_event_handler Punchblock::Event::Offer do |offer|
-        @offer = offer
+        @offer  = offer
         @client = offer.client
         @start_time = offer.timestamp.to_time
       end
@@ -255,7 +253,7 @@ module Adhearsion
         @end_code = event.platform_code
         @end_blocker.broadcast event.reason
         @commands.terminate
-        after(@after_hangup_lifetime || Adhearsion.config.platform.after_hangup_lifetime) {terminate}
+        after(@after_hangup_lifetime || Adhearsion.config.platform.after_hangup_lifetime) { terminate }
       end
     end
 
@@ -431,9 +429,9 @@ module Adhearsion
         when nil
           {}
         when Call
-          {:call_uri => target.uri}
+          { :call_uri => target.uri }
         when String
-          {:call_uri => self.class.uri(transport, target, domain)}
+          { :call_uri => self.class.uri(transport, target, domain) }
         when Hash
           abort ArgumentError.new "You cannot specify both a call URI and mixer name" if target.has_key?(:call_uri) && target.has_key?(:mixer_name)
           target
@@ -477,13 +475,12 @@ module Adhearsion
 
     # @private
     def write_and_await_response(command, timeout = 60, fatal = false)
-      #
-      num = Random.rand 2
-      puts "Random number " + num.to_s
       @commands << command
       write_command command
-      error_handler = fatal ? ->(error) {raise error} : ->(error) {abort error}
-      response = defer {command.response timeout}
+
+      error_handler = fatal ? ->(error) { raise error } : ->(error) { abort error }
+
+      response = defer { command.response timeout }
       case response
         when Punchblock::ProtocolError
           if response.name == :item_not_found
@@ -494,43 +491,21 @@ module Adhearsion
         when Exception
           error_handler[response]
       end
+
       command
-        # if num != 1
-        #   @commands << command
-        #   write_command command
-        #   error_handler = fatal ? ->(error) {raise error} : ->(error) {abort error}
-        #   response = defer {command.response timeout}
-        #   case response
-        #     when Punchblock::ProtocolError
-        #       if response.name == :item_not_found
-        #         error_handler[Hangup.new(@end_reason)]
-        #       else
-        #         error_handler[response]
-        #       end
-        #     when Exception
-        #       error_handler[response]
-        #   end
-        #   command
-        # else
-        #   reset_call
-        # end
-
-
     rescue Timeout::Error
       error_handler[CommandTimeout.new(command.to_s)]
-      reset_call
     ensure
       @commands.delete command
-
     end
 
+    # @private
     def reset_call
       puts "command id hello world"
       Adhearsion.active_calls.remove_inactive_call self
       puts "Finish remove active call of timeout client"
     end
 
-    # @private
     def write_command(command)
       abort Hangup.new(@end_reason) unless active? || command.is_a?(Punchblock::Command::Hangup)
       merge_headers command.headers if command.respond_to? :headers
@@ -539,7 +514,6 @@ module Adhearsion
         command.target_call_id = id
         command.domain = domain
       end
-      puts client.to_s
       client.execute_command command
     end
 
@@ -559,7 +533,6 @@ module Adhearsion
     def logger_id
       "#{self.class}: #{id}@#{domain}"
     end
-
     # @private
     def inspect
       return "..." if Celluloid.detect_recursion
@@ -631,7 +604,7 @@ module Adhearsion
     class CommandRegistry < Array
       def terminate
         hangup = Hangup.new
-        each {|command| command.response = hangup if command.requested?}
+        each { |command| command.response = hangup if command.requested? }
       end
     end
 
